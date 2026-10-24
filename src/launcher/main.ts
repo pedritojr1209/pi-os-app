@@ -10,7 +10,7 @@ import {
   findCloudflared,
   findTailscale,
   isAccessMode,
-  launcherResult,
+  buildLauncherResult,
   spawnCloudflareTunnel,
   tailscaleAddress,
 } from "./access.ts";
@@ -86,7 +86,7 @@ export async function main(): Promise<LauncherResult> {
   }
 
   const url = accessUrl(mode, host, options.port) ?? `http://${host}:${options.port}`;
-  const launched = launcherResult(mode, host, options.port, mode === "cloudflare" ? findCloudflared() : undefined);
+  const launched = buildLauncherResult(mode, host, options.port, mode === "cloudflare" ? findCloudflared() : undefined);
 
   launcherResultState = launched;
   launcherResult = launched;
