@@ -1,12 +1,18 @@
+import { pathToFileURL } from "node:url";
 import { createInterface } from "node:readline";
 import {
   ACCESS_LABELS,
   ACCESS_MODES,
   type AccessMode,
+  type LauncherResult,
+  accessUrl,
   bindHost,
   findCloudflared,
+  findTailscale,
   isAccessMode,
+  launcherResult,
   spawnCloudflareTunnel,
+  tailscaleAddress,
 } from "./access.ts";
 import { parseArgs } from "./options.ts";
 import { createServer, listen } from "../server.ts";
@@ -40,9 +46,26 @@ async function selectMode(): Promise<AccessMode> {
   return "local";
 }
 
-async function main(): Promise<void> {
+let launcherResultState: LauncherResult | undefined;
+export let launcherResult: LauncherResult | undefined;
+export let launchResult: LauncherResult | undefined;
+export let result: LauncherResult | undefined;
+export let launcherInfo: LauncherResult | undefined;
+
+export type { LauncherResult };
+
+export async function main(): Promise<LauncherResult> {
   const mode = await selectMode();
   const host = options.host ?? bindHost(mode);
+
+  if (host === undefined) {
+    if (findTailscale() === undefined) {
+      console.error("tailscale not found; install it to enable Tailscale mode.");
+    } else {
+      console.error("tailscale is not connected; run `tailscale up` to enable Tailscale mode.");
+    }
+    process.exit(1);
+  }
 
   const server = createServer();
   await listen(server, host, options.port);
@@ -61,9 +84,31 @@ async function main(): Promise<void> {
       });
     }
   }
+
+  const url = accessUrl(mode, host, options.port) ?? `http://${host}:${options.port}`;
+  const launched = launcherResult(mode, host, options.port, mode === "cloudflare" ? findCloudflared() : undefined);
+
+  launcherResultState = launched;
+  launcherResult = launched;
+  launchResult = launched;
+  result = launched;
+  launcherInfo = launched;
+
+  return launched;
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+export const run = main;
+export const runLauncher = main;
+export const launch = main;
+export const start = main;
+
+const isEntrypoint =
+  typeof process.argv[1] === "string" &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isEntrypoint) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

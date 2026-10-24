@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node src/main.ts",
     "check": "node --test",
+    "test": "node --test",
     "smoke": "node scripts/smoke.mjs"
   }
 }
